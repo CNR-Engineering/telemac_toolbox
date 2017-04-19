@@ -1,24 +1,17 @@
 #!/usr/bin/python3
 """
-brief:
+@brief:
 Extraire une partie d'un slf
 
-features:
+@features:
 * échantionnage et intervalle temporels
 * suppression de variables en précisant soit les variables à conserver, soit les variables à supprimer (le choix est exclusif)
 * _ajout de variables suivantes (EN COURS DE REALISATION)_
-    * S = B+H
-    * H = S-B
-    * M = sqrt(U²+V²)
-    * US = f(W,H,M)
-    * TAU = rho*US²
-
-Une superbe formule
-===================
-
-### Ici
-
-The distance between \f$(x_1,y_1)\f$ and \f$(x_2,y_2)\f$ is \f$\sqrt{(x_2-x_1)^2+(y_2-y_1)^2}\f$
+** S = B+H
+** H = S-B
+** M = sqrt(U²+V²)
+** US = f(W,H,M)
+** TAU = rho*US²
 """
 
 import sys

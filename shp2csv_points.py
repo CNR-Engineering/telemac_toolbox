@@ -1,4 +1,4 @@
-﻿#!/usr/bin/python3
+#!/usr/bin/python3
 """
 @brief:
 Convertir un fichier shp en un un fichier csv

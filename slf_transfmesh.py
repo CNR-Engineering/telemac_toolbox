@@ -4,13 +4,13 @@
 Modifier le maillage horizontal avec des transformations géométriques
 
 @features:
-1. translation
-2. rotation (angle en degrée dans le sens anti-horaire)
-3. homothétie
-    * |ratio|>1 : agrandissement
-    * |ratio|<1 : réduction
-    * ratio=-1 : symétrie centrale
-    * (ratio=1 : identité)
+# translation
+# rotation (angle en degrée dans le sens anti-horaire)
+# homothétie
+#* |ratio|>1 : agrandissement
+#* |ratio|<1 : réduction
+#* ratio=-1 : symétrie centrale
+#* (ratio=1 : identité)
 
 @warnings:
 * l'ordre des transformations est fixée (@see features) et ne dépend pas de l'ordre des arguments

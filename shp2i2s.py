@@ -7,9 +7,9 @@ Convertir (et translater) un ensemble de polylignes ouvertes shp en i2s
 * choix du nombre de chiffres significatifs à écrire (option `--digits`)
 * translation possible (option `--shift`)
 * La valeur de chaque polyligne est adaptable (option `--value`) :
-    1. si l'option value est un flottant alors les valeurs sont toutes égales à cette constante
-    2. si l'option value est égale à `iter` alors la valeur correspond à la position/numérotation de la polyligne
-    3. sinon la valeur est prise dans l'attribut portant le nom de l'option
+*# si l'option value est un flottant alors les valeurs sont toutes égales à cette constante
+*# si l'option value est égale à `iter` alors la valeur correspond à la position/numérotation de la polyligne
+*# sinon la valeur est prise dans l'attribut portant le nom de l'option
 * Chaque polyligne peut être échantionnée selon une distance maximale avec l'option `--ech`
 """
 #FIXME: échantionner après la translation (gagner en précision)

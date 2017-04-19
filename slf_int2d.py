@@ -11,14 +11,14 @@
 
 @features:
 * Deux exports possibles (le choix est fait en spécifiant l'extension du fichier de sortie `OUTPATTERN`) :
-    * export en _csv_ en un seul fichier contenant les colonnes ['id', 'X', 'Y', 'time'] et une colonne par variable à traiter
-    * export en _xlsx_ avec une variable par onglet et un point par colonne
+** export en _csv_ en un seul fichier contenant les colonnes ['id', 'X', 'Y', 'time'] et une colonne par variable à traiter
+** export en _xlsx_ avec une variable par onglet et un point par colonne
 
 @info:
 * Format du fichier CSV d'entrée :
-    * 3 columns (id, x, y) with colon (';') separator
-    * header is compulsory but order of column may vary
-    * id must be unique and is a string or an integer
+** 3 columns (id, x, y) with colon (';') separator
+** header is compulsory but order of column may vary
+** id must be unique and is a string or an integer
 """
 
 import copy

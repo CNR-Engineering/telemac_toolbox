@@ -10,9 +10,9 @@ Interpolate values at given points in a 2D unstructured mesh (with triangular el
 
 @info:
 * csv_convention for the point set:
-    * 3 columns (id, x, y) with colon (',') separator
-    * header is compulsory but order of column may vary
-    * id must be unique and is a string or an integer
+** 3 columns (id, x, y) with colon (',') separator
+** header is compulsory but order of column may vary
+** id must be unique and is a string or an integer
 * outCSV : CSV with columns : time, id, x, y and varID_list
 """
 

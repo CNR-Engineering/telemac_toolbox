@@ -6,8 +6,8 @@ Convertir un fichier shp en un semis de points xyz (format BlueKenue)
 @features:
 * possibilité de translater les points
 * formats d'entrée possibles :
-    * polylignes (avec Z)
-    * semis de points (avec Z)
+** polylignes (avec Z)
+** semis de points (avec Z)
 """
 #TODO: etudier le cas sans Z
 #FIXME: optimiser conversion en point et point par point pour MultiPoint

@@ -7,9 +7,9 @@ Convertir (et translater) un ensemble de polylignes ouvertes shp en i3s
 * choix du nombre de chiffres significatifs à écrire
 * translation possible
 * La valeur de chaque polyligne est adapté en fonction de l'option `--value` :
-    1. si l'option value est un flottant alors les valeurs sont toutes égales à cette constante
-    2. si l'option value est égale à `iter` alors la valeur correspond à la position/numérotation de la polyligne
-    3. sinon la valeur est prise dans l'attribut portant le nom de l'option
+*# si l'option value est un flottant alors les valeurs sont toutes égales à cette constante
+*# si l'option value est égale à `iter` alors la valeur correspond à la position/numérotation de la polyligne
+*# sinon la valeur est prise dans l'attribut portant le nom de l'option
 """
 
 import fiona
