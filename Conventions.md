@@ -6,7 +6,8 @@ Conventions
 * linux line breaking
 * shebang: `#!/usr/bin/python3`
 * indent: 4 spaces
-* comment language: english as much as possible
+* comment language: English
+* naming: lowercase_with_underscores for variables, functions and method names
 
 ## Module imports
 No import with *
@@ -31,7 +32,7 @@ Use `common/arg_command_line.py`
 Some arguments are defined as general rule:
 * `-h`, `--help`: get help and exit
 * `-f`, `--force`: force overwrite output
-* `-v`, `--verbose`: increase output verbosit
+* `-v`, `--verbose`: increase output verbosity
 
 ## Documentation
 ### Developer
