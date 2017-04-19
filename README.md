@@ -6,15 +6,7 @@ Version: tested with 3.4
 Dependencies: numpy, pandas, ...
 
 # Conventions
-* encoding: utf-8
-* linux line breaking
-* shebang: #!/usr/bin/python3
-* indent: 4 spaces
-* comment language: english as much as possible
-* use argparse as much as possible. Some classical arguments:
-    * -h, --help: get help and exit
-    * -f, --force: force overwrite output
-    * -v, --verbose: increase output verbosit
+See Conventions.md.
 
 # Classes
 * Serafin
