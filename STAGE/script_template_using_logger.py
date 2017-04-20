@@ -72,7 +72,7 @@ with Read(args.inname, args.lang) as resin:
     resin.get_time()
     print(resin.var_names)
     print(resin.var_IDs)
-    print(resin.time[1:])
+    print(resin.time[1:10])
     print(resin.read_var_in_frame(resin.time[1], 'U')[1:4])
 
 # ==================================================================
