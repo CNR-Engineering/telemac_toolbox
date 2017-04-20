@@ -26,8 +26,7 @@
 "TMXZ","TEMPS COTE MAXI ","HIGH WATER TIME ","S               "
 "MAXV","VITESSE MAXIMUM ","HIGHEST VELOCITY","M/S             "
 "TMXV","T VITESSE MAXI  ","TIME OF HIGH VEL","S               "
-"US","VITESSE DE FROT.","FRICTION VEL.   ","M/S             "
-# User defined
+"US","VITESSE DE FROT.","FRICTION VEL.   ","M/S             "# User defined
 "UV","VITESSE UV      ","VELOCITY UV     ","M/S             "
 "TAU","CONTRAINTE      ","BED SHEAR STRESS","PASCAL          "
 "TA1","TRACEUR 1       ","TRAC??? 1       ","????????????????"

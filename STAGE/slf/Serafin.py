@@ -127,7 +127,7 @@ class Read(Serafin):
     """
     @brief: .slf file input stream
     """
-    def __init__(self, filename, language='fr'):
+    def __init__(self, filename, language):
         super().__init__(filename, 'rb', language)
         # additional attribute
         self.file_size = os.path.getsize(self.filename)
@@ -143,12 +143,12 @@ class Read(Serafin):
         self.file_type = self.file.read(8)
         module_logger.debug('The file type is: "%s"' % self.file_type.decode('utf-8'))
         self.file.read(4)
-        if self.file_type.decode('utf-8') == 'SERAFIN ':
-            self.float_type = 'f'
-            self.float_size = 4
-        else:
+        if self.file_type.decode('utf-8') == 'SERAFIND':
             self.float_type = 'd'
             self.float_size = 8
+        else:
+            self.float_type = 'f'
+            self.float_size = 4
         self.np_float_type = FLOAT_TYPE[self.float_type]
 
         # Read the number of linear and quadratic variables
@@ -249,18 +249,19 @@ class Read(Serafin):
         # Deduce the number of frames and test the integer division
         self.nb_frames = (self.file_size - self.header_size) // self.frame_size
         module_logger.debug('The file has %d frames of size %d bytes' % (self.nb_frames, self.frame_size))
+
         if self.nb_frames * self.frame_size != (self.file_size - self.header_size):
             module_logger.error('ERROR: The file size is not equal to (header size) + (nb frames) * (frame size)')
             raise SerafinValidationError('Something wrong with the file size (header and frames) check')
 
-        # Deduce variable IDs from names
-        for var_name in self.var_names:
+        # Deduce variable IDs (if known from specifications) from names
+        for var_name, var_unit in zip(self.var_names, self.var_units):
             name = var_name.decode(encoding='utf-8')
-            try:
-                var_id = self.specifications.name_to_ID(name)
-            except ValueError:
-                module_logger.error('EROOR: The variable name "%s" in the file is not in name specification table' % name)
-                raise SerafinValidationError('(Wrong file language?) Variable name not found in the specification table')
+            var_id = self.specifications.name_to_ID(name)
+            if var_id is None:
+                module_logger.warn('WARNING: The variable name "%s" is not known. The complete name will be used as ID' % name)
+                self.specifications.add_new_var(var_name, var_unit)
+                var_id = name
             self.var_IDs.append(var_id)
 
         # Build ikle2d
@@ -298,15 +299,15 @@ class Read(Serafin):
         @param var_ID <str>: variable ID
         @return var <numpy 1D-array>: values of the variables, of length equal to the number of nodes
         """
+        # appropriate warning when trying to exact a single variable
+        if not isinstance(var_ID, str):
+            module_logger.warn('ERROR: (use read_vars_in_frame instead?) Cannot read multiple variables')
+            raise SerafinRequestError('(use read_vars_in_frame instead?) Cannot read multiple variables')
+
         nb_values = '>%i%s' % (self.nb_nodes, self.float_type)
         pos_time_to_read = self.time_to_index(time_to_read)
         module_logger.info('Reading the variable "%s" at time "%.1f"' % (var_ID, time_to_read))
-        try:
-            pos_var = self.var_IDs.index(var_ID)
-        except ValueError:
-            module_logger.error('Requested variable ID not found')
-            raise ValueError('ERROR: Possible variables are {}'.format(self.var_IDs))
-
+        pos_var = self.var_ID_to_index(var_ID)
         self.file.seek(self.header_size + pos_time_to_read * self.frame_size
                                         + 8 + self.float_size + pos_var * (8 + 4 * self.nb_nodes), 0)
         self.file.read(4)
@@ -342,11 +343,10 @@ class Write(Serafin):
     """
     @brief: .slf file ouput stream
     """
-    def __init__(self, filename, overwrite=False, language='fr'):
+    def __init__(self, filename, language, overwrite):
         mode = 'wb' if overwrite else 'xb'
         super().__init__(filename, mode, language)
         module_logger.info('Writing the output file: "%s"' % filename)
-
 
     def __enter__(self):
         try:
@@ -466,8 +466,15 @@ class Write(Serafin):
         self.file.write(struct.pack('>i', 4))
         self.file.write(struct.pack('>%s' % self.float_type, time_to_write))
         self.file.write(struct.pack('>i', 4))
-        for i in range(self.nb_var):
+
+        if self.nb_var == 1:  # special case when values is 1D-array
             self.file.write(struct.pack('>i', self.float_size * self.nb_nodes))
-            self.file.write(struct.pack(nb_values, *values[i]))
+            self.file.write(struct.pack(nb_values, *values))
             self.file.write(struct.pack('>i', self.float_size * self.nb_nodes))
+
+        else:
+            for i in range(self.nb_var):
+                self.file.write(struct.pack('>i', self.float_size * self.nb_nodes))
+                self.file.write(struct.pack(nb_values, *values[i]))
+                self.file.write(struct.pack('>i', self.float_size * self.nb_nodes))
 

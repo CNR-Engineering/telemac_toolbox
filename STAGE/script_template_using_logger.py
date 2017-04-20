@@ -4,7 +4,9 @@
 An example of script using logger
 tested using:
 > python script_template_using_logger.py testdata\test.slf
-> python script_template_using_logger.py -v testdata\test.slf
+> python script_template_using_logger.py testdata\test.slf -v
+> python script_template_using_logger.py testdata\test.slf -vv
+> python script_template_using_logger.py testdata\f2d_confluence.slf --lang en
 """
 
 import os
@@ -18,6 +20,7 @@ from slf.Serafin import Read
 parser = myargparse(description=__doc__, add_args=['force', 'verbose'])
 parser.add_argument('inname', help='Serafin input filename')
 # parser.add_argument('outname', help='Serafin output filename')
+parser.add_argument('--lang', type=str, help='Language used in the input file (fr or en)', default='fr')
 args = parser.parse_args()
 
 # handle the verbosity/debug option
@@ -64,10 +67,12 @@ logger.error('Start running the script..')
 # ==================================================================
 # =========== here goes the script =================================
 
-with Read(args.inname) as resin:
+with Read(args.inname, args.lang) as resin:
     resin.read_header()
     resin.get_time()
-    print(resin.time[1:10])
+    print(resin.var_names)
+    print(resin.var_IDs)
+    print(resin.time[1:])
     print(resin.read_var_in_frame(resin.time[1], 'U')[1:4])
 
 # ==================================================================

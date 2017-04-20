@@ -2,15 +2,6 @@
 
 import os
 import pandas as pd
-import bisect
-
-
-def index(a, x):
-    """Return the index of the leftmost value exactly equal to x"""
-    i = bisect.bisect_left(a, x)
-    if i != len(a) and a[i] == x:
-        return i
-    raise ValueError
 
 
 class SerafinVariableNames:
@@ -26,11 +17,20 @@ class SerafinVariableNames:
         else:
             self.var_table = pd.read_csv(os.path.join(base_folder, 'data', 'Serafin_var3D.csv'),
                                          index_col=0, header=0, sep=',')
-        self.var_table.sort_values(self.language, inplace=True)
 
     def name_to_ID(self, var_name):
-        var_index = index(self.var_table[self.language], var_name)
+        try:
+            var_index = self.var_table[self.language].tolist().index(var_name)
+        except ValueError:
+            return  # handled in Serafin.Read
         var_ID = self.var_table.index.values[var_index]
         return var_ID
 
+    def add_new_var(self, var_name, var_unit):
+        """
+        @brief: Add new variable specification in the table
+        @param var_name <bytes>: the name of the new variable
+        @param var_unit <bytes>: the unit of the new variable
+        """
+        self.var_table.append({var_name.decode('utf-8'): [var_name, var_name, var_unit]}, ignore_index=True)
 
