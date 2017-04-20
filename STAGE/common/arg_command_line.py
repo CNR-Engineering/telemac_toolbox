@@ -2,6 +2,7 @@
 Custom argparse with a custom formatter_class and optional arguments
 """
 
+import logging
 import argparse
 import sys
 
@@ -22,6 +23,6 @@ class myargparse(argparse.ArgumentParser):
             if arg == 'force':
                 self.add_argument('--force', '-f', help='force output overwrite', action='store_true')
             elif arg == 'verbose':
-                self.add_argument('--verbose', '-v', help='increase output verbosity', action='store_true')
+                self.add_argument('--verbose', '-v', help='increase output verbosity', action='count', default=0)
             else:
                 sys.exit("Unknown argument: '{}'".format(arg))

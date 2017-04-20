@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 An example of script using logger
@@ -20,6 +20,10 @@ parser.add_argument('inname', help='Serafin input filename')
 # parser.add_argument('outname', help='Serafin output filename')
 args = parser.parse_args()
 
+# handle the verbosity/debug option
+levels = ['WARNING', 'INFO', 'DEBUG']
+loglevel = levels[min(len(levels)-1, args.verbose)]  # capped to number of levels
+
 # apply logging configurations
 logging.config.dictConfig({
     'version': 1,
@@ -31,7 +35,7 @@ logging.config.dictConfig({
     },
     'handlers': {
         'console': {
-            'level': 'INFO' if args.verbose else 'WARNING',  # handle the verbosity option
+            'level': loglevel,
             'class': 'logging.StreamHandler',
             'formatter': 'standard'
         },
@@ -55,7 +59,7 @@ logging.config.dictConfig({
 logger = logging.getLogger(__name__)
 
 # running the script
-logger.info('Start running the script..')
+logger.error('Start running the script..')
 
 # ==================================================================
 # =========== here goes the script =================================
