@@ -28,10 +28,9 @@ class SerafinVariableNames:
                                          index_col=0, header=0, sep=',')
         self.var_table.sort_values(self.language, inplace=True)
 
-    def find(self, var_name):
+    def name_to_ID(self, var_name):
         var_index = index(self.var_table[self.language], var_name)
         var_ID = self.var_table.index.values[var_index]
         return var_ID
-
 
 

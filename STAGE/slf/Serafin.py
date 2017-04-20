@@ -25,6 +25,13 @@ class SerafinValidationError(Exception):
     pass
 
 
+class SerafinRequestError(Exception):
+    """
+    @brief: Custom exception for requesting invalid values from .slf object
+    """
+    pass
+
+
 class Serafin:
     """
     @brief: A Serafin object corresponds to a single .slf in file IO stream
@@ -47,8 +54,8 @@ class Serafin:
         self.float_size = None  # 4 or 8
         self.np_float_type = None  # np.float32 or np.float64
 
-        self._nb_var = None
-        self._nb_var_quadratic = None
+        self.nb_var = None
+        self.nb_var_quadratic = None
         self.var_names = []
         self.var_units = []
         self.var_IDs = []
@@ -83,6 +90,38 @@ class Serafin:
         self.file.close()
         return False
 
+    def var_ID_to_index(self, var_ID):
+        """
+        @brief: Handle data request by variable ID
+        @param var_ID <str>: the ID of the requested variable
+        @return index <int> the index of the requested variable
+        """
+        if not self.var_IDs:
+            module_logger.error('ERROR: (forgot read_header ?) var_IDs is empty')
+            raise SerafinRequestError('(forgot read_header ?) Cannot extract variable from empty list.')
+        try:
+            index = self.var_IDs.index(var_ID)
+        except ValueError:
+            module_logger.error('ERROR: Variable ID not found')
+            raise SerafinRequestError('Variable ID not found')
+        return index
+
+    def time_to_index(self, time_request):
+        """
+        @brief: Handle data request by time value
+        @param time_request <str>: the ID of the requested time
+        @return index <int> the index of the requested time in the time series
+        """
+        if not self.time:
+            module_logger.error('ERROR: (forgot get_time ?) time is empty')
+            raise SerafinRequestError('(forgot get_time r ?) Cannot find the requested time from empty list.')
+        try:
+            index = self.time.index(time_request)
+        except ValueError:
+            module_logger.error('ERROR: Requested time not found')
+            raise SerafinRequestError('Requested time not found')
+        return index
+
 
 class Read(Serafin):
     """
@@ -114,16 +153,16 @@ class Read(Serafin):
 
         # Read the number of linear and quadratic variables
         self.file.read(4)
-        self._nb_var = struct.unpack('>i', self.file.read(4))[0]
-        self._nb_var_quadratic = struct.unpack('>i', self.file.read(4))[0]
-        module_logger.debug('The file has %d variables' % self._nb_var)
+        self.nb_var = struct.unpack('>i', self.file.read(4))[0]
+        self.nb_var_quadratic = struct.unpack('>i', self.file.read(4))[0]
+        module_logger.debug('The file has %d variables' % self.nb_var)
         self.file.read(4)
-        if self._nb_var_quadratic != 0:
+        if self.nb_var_quadratic != 0:
             module_logger.error('ERROR: The number of quadratic variables is not equal to 0')
             raise SerafinValidationError('The number of quadratic variables is not equal to zero')
 
         # Read variable names and units
-        for ivar in range(self._nb_var):
+        for ivar in range(self.nb_var):
             self.file.read(4)
             self.var_names.append(self.file.read(16))
             self.var_units.append(self.file.read(16))
@@ -201,11 +240,11 @@ class Read(Serafin):
         self.file.read(4)
 
         # Header size
-        self.header_size = (80 + 8) + (8 + 8) + (self._nb_var * (8 + 32)) \
+        self.header_size = (80 + 8) + (8 + 8) + (self.nb_var * (8 + 32)) \
                                     + (40 + 8) + (self._params[-1] * ((6 * 4) + 8)) + (16 + 8) \
                                     + (nb_ikle_values * 4 + 8) + (self.nb_nodes * 4 + 8) + 2 * (coord_size + 8)
         # Frame size (all variable values for one time step)
-        self.frame_size = 8 + self.float_size + (self._nb_var * (8 + self.nb_nodes * self.float_size))
+        self.frame_size = 8 + self.float_size + (self.nb_var * (8 + self.nb_nodes * self.float_size))
 
         # Deduce the number of frames and test the integer division
         self.nb_frames = (self.file_size - self.header_size) // self.frame_size
@@ -214,10 +253,14 @@ class Read(Serafin):
             module_logger.error('ERROR: The file size is not equal to (header size) + (nb frames) * (frame size)')
             raise SerafinValidationError('Something wrong with the file size (header and frames) check')
 
-        # Deduce variable IDs and units from names
+        # Deduce variable IDs from names
         for var_name in self.var_names:
-            # TODO error handling in find
-            var_id = self.specifications.find(var_name.decode(encoding='utf-8'))
+            name = var_name.decode(encoding='utf-8')
+            try:
+                var_id = self.specifications.name_to_ID(name)
+            except ValueError:
+                module_logger.error('EROOR: The variable name "%s" in the file is not in name specification table' % name)
+                raise SerafinValidationError('(Wrong file language?) Variable name not found in the specification table')
             self.var_IDs.append(var_id)
 
         # Build ikle2d
@@ -255,12 +298,8 @@ class Read(Serafin):
         @param var_ID <str>: variable ID
         @return var <numpy 1D-array>: values of the variables, of length equal to the number of nodes
         """
-        # check if the time is already read before
-        if not self.time:
-            self.get_time()
-
         nb_values = '>%i%s' % (self.nb_nodes, self.float_type)
-        pos_time_to_read = self.time.index(time_to_read)
+        pos_time_to_read = self.time_to_index(time_to_read)
         module_logger.info('Reading the variable "%s" at time "%.1f"' % (var_ID, time_to_read))
         try:
             pos_var = self.var_IDs.index(var_ID)
@@ -274,6 +313,30 @@ class Read(Serafin):
         return np.array(struct.unpack(nb_values, self.file.read(self.float_size * self.nb_nodes)),
                         dtype=self.np_float_type)
 
+    def read_vars_in_frame(self, time_to_read, var_IDs):
+        """
+        @brief: read multiple variables in a frame
+        @param time_to_read <float>: simulation time (in seconds) from the target frame
+        @param var_IDs <str>: variable IDs
+        @return var <numpy 2D-array>: values of variables of shape = (nb target vars, nb nodes)
+        """
+        # appropriate warning when trying to exact a single variable
+        nb_target_vars = len(var_IDs)
+        if nb_target_vars == 1:
+            module_logger.warn('WARNING: (use read_var_in_frame instead?) Trying to extract a single variable')
+
+        nb_values = '>%i%s' % (self.nb_nodes, self.float_type)
+        pos_time_to_read = self.time_to_index(time_to_read)
+        pos_target_vars = map(self.var_ID_to_index, var_IDs)
+        var = np.empty([nb_target_vars, self.nb_nodes], dtype=self.np_float_type)
+        for i, pos_var in enumerate(pos_target_vars):
+            self.file.seek(self.header_size + pos_time_to_read * self.frame_size
+                           + 8 + self.float_size + pos_var * (8 + self.float_size * self.nb_nodes),
+                           0)
+            self.file.read(4)
+            var[i] = struct.unpack(nb_values, self.file.read(self.float_size * self.nb_nodes))
+        return var
+
 
 class Write(Serafin):
     """
@@ -282,6 +345,8 @@ class Write(Serafin):
     def __init__(self, filename, overwrite=False, language='fr'):
         mode = 'wb' if overwrite else 'xb'
         super().__init__(filename, mode, language)
+        module_logger.info('Writing the output file: "%s"' % filename)
+
 
     def __enter__(self):
         try:
@@ -298,7 +363,7 @@ class Write(Serafin):
         """
         self.title = other.title
         self.file_type = other.file_type
-        self.float_size = other.float_type
+        self.float_size = other.float_size
         self.float_type = other.float_type
         self.np_float_type = other.np_float_type
         self.is_2d = other.is_2d
@@ -309,8 +374,8 @@ class Write(Serafin):
         self.var_units = other.var_units[:]
 
         # Copy integers and tuples of integers
-        self._nb_var = other._nb_var
-        self._nb_var_quadratic = other._nb_var_quadratic
+        self.nb_var = other.nb_var
+        self.nb_var_quadratic = other.nb_var_quadratic
         self._params = other._params
         self.nb_planes = self.nb_planes
         if other.date is not None:
@@ -319,7 +384,6 @@ class Write(Serafin):
         self.nb_nodes = other.nb_nodes
         self.nb_nodes_2d = other.nb_nodes_2d
         self.nb_nodes_per_elem = other.nb_nodes_per_elem
-        self.header_size = other.header_size
 
         # Copy numpy arrays
         self.ikle = np.copy(other.ikle)
@@ -339,12 +403,12 @@ class Write(Serafin):
 
         # Number of variables
         self.file.write(struct.pack('>i', 8))
-        self.file.write(struct.pack('>i', self._nb_var))
-        self.file.write(struct.pack('>i', self._nb_var_quadratic))
+        self.file.write(struct.pack('>i', self.nb_var))
+        self.file.write(struct.pack('>i', self.nb_var_quadratic))
         self.file.write(struct.pack('>i', 8))
 
         # Variable names and units
-        for j in range(self._nb_var):
+        for j in range(self.nb_var):
             self.file.write(struct.pack('>i', 2 * 16))
             self.file.write(self.var_names[j].ljust(16))
             self.file.write(self.var_units[j].ljust(16))
@@ -382,13 +446,28 @@ class Write(Serafin):
 
         # X coordinates
         self.file.write(struct.pack('>i', 4 * self.nb_nodes))
-        nb_val = '>%if' % self.nb_nodes
+        nb_val = '>%i%s' % (self.nb_nodes, self.float_type)
         self.file.write(struct.pack(nb_val, *self.x))
         self.file.write(struct.pack('>i', 4 * self.nb_nodes))
 
         # Y coordinates
         self.file.write(struct.pack('>i', 4 * self.nb_nodes))
-        nb_val = '>%if' % self.nb_nodes
+        nb_val = '>%i%s' % (self.nb_nodes, self.float_type)
         self.file.write(struct.pack(nb_val, *self.y))
         self.file.write(struct.pack('>i', 4 * self.nb_nodes))
+
+    def write_entire_frame(self, time_to_write, values):
+        """
+        @brief: write all variables/nodes values
+        @param time_to_write <float>: time in second
+        @param values <numpy 2D-array>: values to write
+        """
+        nb_values = '>%i%s' % (self.nb_nodes, self.float_type)
+        self.file.write(struct.pack('>i', 4))
+        self.file.write(struct.pack('>%s' % self.float_type, time_to_write))
+        self.file.write(struct.pack('>i', 4))
+        for i in range(self.nb_var):
+            self.file.write(struct.pack('>i', self.float_size * self.nb_nodes))
+            self.file.write(struct.pack(nb_values, *values[i]))
+            self.file.write(struct.pack('>i', self.float_size * self.nb_nodes))
 
