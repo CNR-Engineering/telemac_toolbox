@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Revised version of Serafin.py (in construction)
+Revised version of Serafin.py (under heavy construction)
 Read/Write Serafin files and manipulate associated data
 """
 
 
-import sys
 import struct
 import numpy as np
 import os
 import logging
 from .SerafinSpecifications import SerafinVariableNames
+
+
+FLOAT_TYPE = {'f': np.float32, 'd': np.float64}
 
 module_logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ class Serafin:
         self.mode = mode
 
         self.filename = filename
-        self.file_size = os.path.getsize(self.filename)
+        self.file_size = None
         self.mode = mode
         self.file = None
         self.specifications = None
@@ -43,14 +45,15 @@ class Serafin:
         self.file_type = None  # SERAFIN or SERAFIND
         self.float_type = None  # 'i' or 'd'
         self.float_size = None  # 4 or 8
+        self.np_float_type = None  # np.float32 or np.float64
 
         self._nb_var = None
         self._nb_var_quadratic = None
         self.var_names = []
         self.var_units = []
         self.var_IDs = []
-        self._param = None
 
+        self._params = None
         self.nb_planes = None
         self.date = None
 
@@ -82,9 +85,14 @@ class Serafin:
 
 
 class Read(Serafin):
+    """
+    @brief: .slf file input stream
+    """
     def __init__(self, filename, language='fr'):
         super().__init__(filename, 'rb', language)
-        module_logger.info('Reading the input file: "%s"' % filename)
+        # additional attribute
+        self.file_size = os.path.getsize(self.filename)
+        module_logger.info('Reading the input file: "%s" of size %d bytes' % (filename, self.file_size))
 
     def read_header(self):
         """
@@ -97,11 +105,12 @@ class Read(Serafin):
         module_logger.debug('The file type is: "%s"' % self.file_type.decode('utf-8'))
         self.file.read(4)
         if self.file_type.decode('utf-8') == 'SERAFIN ':
-            self.float_type = 'i'
+            self.float_type = 'f'
             self.float_size = 4
         else:
             self.float_type = 'd'
             self.float_size = 8
+        self.np_float_type = FLOAT_TYPE[self.float_type]
 
         # Read the number of linear and quadratic variables
         self.file.read(4)
@@ -122,13 +131,13 @@ class Read(Serafin):
 
         # IPARAM: 10 integers (not all are useful...)
         self.file.read(4)
-        self._param = struct.unpack('>10i', self.file.read(40))
+        self._params = struct.unpack('>10i', self.file.read(40))
         self.file.read(4)
-        self.nb_planes = self._param[6]
+        self.nb_planes = self._params[6]
 
         self.is_2d = (self.nb_planes == 0)
 
-        if self._param[-1] == 1:
+        if self._params[-1] == 1:
             # Read 6 integers which correspond to simulation starting date
             self.file.read(4)
             self.date = struct.unpack('>6i', self.file.read(6 * 4))
@@ -155,6 +164,7 @@ class Read(Serafin):
             if self.nb_planes < 2:
                 module_logger.error('ERROR: The number of planes is less than 2')
                 raise SerafinValidationError('Unknown mesh type')
+        module_logger.debug('The file is determined to be %s' % {True: '2D', False: '3D'}[self.is_2d])
 
         # construct the variable name specifications
         self.specifications = SerafinVariableNames(self.is_2d, self.language)
@@ -182,32 +192,33 @@ class Read(Serafin):
         self.file.read(4)
         nb_coord_values = '>%i%s' % (self.nb_nodes, self.float_type)
         coord_size = self.nb_nodes * self.float_size
-        self.x = np.array(struct.unpack(nb_coord_values, self.file.read(coord_size)))
+        self.x = np.array(struct.unpack(nb_coord_values, self.file.read(coord_size)), dtype=self.np_float_type)
         self.file.read(4)
 
         # y coordinates
         self.file.read(4)
-        self.y = np.array(struct.unpack(nb_coord_values, self.file.read(coord_size)))
+        self.y = np.array(struct.unpack(nb_coord_values, self.file.read(coord_size)), dtype=self.np_float_type)
         self.file.read(4)
 
         # Header size
         self.header_size = (80 + 8) + (8 + 8) + (self._nb_var * (8 + 32)) \
-                                    + (40 + 8) + (self._param[-1] * ((6 * 4) + 8)) + (16 + 8) \
+                                    + (40 + 8) + (self._params[-1] * ((6 * 4) + 8)) + (16 + 8) \
                                     + (nb_ikle_values * 4 + 8) + (self.nb_nodes * 4 + 8) + 2 * (coord_size + 8)
         # Frame size (all variable values for one time step)
-        self.frame_size = 12 + (self._nb_var * (8 + int(self.nb_nodes) * 4))
+        self.frame_size = 8 + self.float_size + (self._nb_var * (8 + self.nb_nodes * self.float_size))
 
         # Deduce the number of frames and test the integer division
         self.nb_frames = (self.file_size - self.header_size) // self.frame_size
+        module_logger.debug('The file has %d frames of size %d bytes' % (self.nb_frames, self.frame_size))
         if self.nb_frames * self.frame_size != (self.file_size - self.header_size):
             module_logger.error('ERROR: The file size is not equal to (header size) + (nb frames) * (frame size)')
-            raise SerafinValidationError('Something wrong with the file size / header size / frame size')
+            raise SerafinValidationError('Something wrong with the file size (header and frames) check')
 
-        # Deduce variable IDs (abbreviation of variables)
+        # Deduce variable IDs and units from names
         for var_name in self.var_names:
+            # TODO error handling in find
             var_id = self.specifications.find(var_name.decode(encoding='utf-8'))
             self.var_IDs.append(var_id)
-        assert len(self.var_IDs) == len(self.var_names), 'Could not find a varID for all varNames'
 
         # Build ikle2d
         if not self.is_2d:
@@ -223,16 +234,19 @@ class Read(Serafin):
         else:
             self.ikle_2d = self.ikle.reshape(self.nb_elements, self.nb_nodes_per_elem)
 
+        module_logger.info('Finished reading the header')
+
     def get_time(self):
         """
         @brief: read the time in the .slf file
         """
+        module_logger.debug('Reading the time series from the file')
         self.file.seek(self.header_size, 0)
         for i in range(self.nb_frames):
             self.file.read(4)
-            self.time.append(struct.unpack('>f', self.file.read(4))[0])
+            self.time.append(struct.unpack('>%s' % self.float_type, self.file.read(self.float_size))[0])
             self.file.read(4)
-            self.file.seek(self.frame_size - 12, 1)
+            self.file.seek(self.frame_size - 8 - self.float_size, 1)
 
     def read_var_in_frame(self, time_to_read, var_ID):
         """
@@ -244,7 +258,8 @@ class Read(Serafin):
         # check if the time is already read before
         if not self.time:
             self.get_time()
-        nb_values = '>%if' % self.nb_nodes
+
+        nb_values = '>%i%s' % (self.nb_nodes, self.float_type)
         pos_time_to_read = self.time.index(time_to_read)
         module_logger.info('Reading the variable "%s" at time "%.1f"' % (var_ID, time_to_read))
         try:
@@ -254,12 +269,16 @@ class Read(Serafin):
             raise ValueError('ERROR: Possible variables are {}'.format(self.var_IDs))
 
         self.file.seek(self.header_size + pos_time_to_read * self.frame_size
-                                        + 12 + pos_var * (8 + 4 * self.nb_nodes), 0)
+                                        + 8 + self.float_size + pos_var * (8 + 4 * self.nb_nodes), 0)
         self.file.read(4)
-        return np.array(struct.unpack(nb_values, self.file.read(4 * self.nb_nodes)))
+        return np.array(struct.unpack(nb_values, self.file.read(self.float_size * self.nb_nodes)),
+                        dtype=self.np_float_type)
 
 
 class Write(Serafin):
+    """
+    @brief: .slf file ouput stream
+    """
     def __init__(self, filename, overwrite=False, language='fr'):
         mode = 'wb' if overwrite else 'xb'
         super().__init__(filename, mode, language)
@@ -268,7 +287,108 @@ class Write(Serafin):
         try:
             return Serafin.__enter__(self)
         except FileExistsError:
-            sys.exit('File {} already exists (remove the file or change '
-                     'the option and then re-run the program)'.format(self.filename))
+            module_logger.error('ERROR: Cannot overwrite existing file')
+            raise FileExistsError('File {} already exists (remove the file or change the option '
+                                  'and then re-run the program)'.format(self.filename))
 
+    def copy_header(self, other):
+        """
+        @brief: copy attributes of another Serafin object with the SAME header
+        @param other <Serafin>: Serafin object to copy
+        """
+        self.title = other.title
+        self.file_type = other.file_type
+        self.float_size = other.float_type
+        self.float_type = other.float_type
+        self.np_float_type = other.np_float_type
+        self.is_2d = other.is_2d
+
+        # Copy lists
+        self.var_IDs = other.var_IDs[:]
+        self.var_names = other.var_names[:]
+        self.var_units = other.var_units[:]
+
+        # Copy integers and tuples of integers
+        self._nb_var = other._nb_var
+        self._nb_var_quadratic = other._nb_var_quadratic
+        self._params = other._params
+        self.nb_planes = self.nb_planes
+        if other.date is not None:
+            self.date = other.date
+        self.nb_elements = other.nb_elements
+        self.nb_nodes = other.nb_nodes
+        self.nb_nodes_2d = other.nb_nodes_2d
+        self.nb_nodes_per_elem = other.nb_nodes_per_elem
+        self.header_size = other.header_size
+
+        # Copy numpy arrays
+        self.ikle = np.copy(other.ikle)
+        self.ipobo = np.copy(other.ipobo)
+        self.x = np.copy(other.x)
+        self.y = np.copy(other.y)
+
+    def write_header(self):
+        """
+        @brief: Write Serafin header from attributes
+        """
+        # Title and file type
+        self.file.write(struct.pack('>i', 80))
+        self.file.write(self.title)
+        self.file.write(self.file_type)
+        self.file.write(struct.pack('>i', 80))
+
+        # Number of variables
+        self.file.write(struct.pack('>i', 8))
+        self.file.write(struct.pack('>i', self._nb_var))
+        self.file.write(struct.pack('>i', self._nb_var_quadratic))
+        self.file.write(struct.pack('>i', 8))
+
+        # Variable names and units
+        for j in range(self._nb_var):
+            self.file.write(struct.pack('>i', 2 * 16))
+            self.file.write(self.var_names[j].ljust(16))
+            self.file.write(self.var_units[j].ljust(16))
+            self.file.write(struct.pack('>i', 2 * 16))
+
+        # Date
+        self.file.write(struct.pack('>i', 10 * 4))
+        self.file.write(struct.pack('>10i', *self._params))
+        self.file.write(struct.pack('>i', 10 * 4))
+        if self._params[-1] == 1:
+            self.file.write(struct.pack('>i', 6 * 4))
+            self.file.write(struct.pack('>6i', *self.date))
+            self.file.write(struct.pack('>i', 6 * 4))
+
+        # Number of elements, of nodes, of nodes per element and the magic number
+        self.file.write(struct.pack('>i', 4 * 4))
+        self.file.write(struct.pack('>i', self.nb_elements))
+        self.file.write(struct.pack('>i', self.nb_nodes))
+        self.file.write(struct.pack('>i', self.nb_nodes_per_elem))
+        self.file.write(struct.pack('>i', 1))  # magic number
+        self.file.write(struct.pack('>i', 4 * 4))
+
+        # IKLE
+        nb_ikle_values = self.nb_elements * self.nb_nodes_per_elem
+        self.file.write(struct.pack('>i', 4 * nb_ikle_values))
+        nb_val = '>%ii' % nb_ikle_values
+        self.file.write(struct.pack(nb_val, *self.ikle))
+        self.file.write(struct.pack('>i', 4 * nb_ikle_values))
+
+        # IPOBO
+        self.file.write(struct.pack('>i', 4 * self.nb_nodes))
+        nb_val = '>%ii' % self.nb_nodes
+        self.file.write(struct.pack(nb_val, *self.ipobo))
+        self.file.write(struct.pack('>i', 4 * self.nb_nodes))
+
+        # X coordinates
+        self.file.write(struct.pack('>i', 4 * self.nb_nodes))
+        nb_val = '>%if' % self.nb_nodes
+        self.file.write(struct.pack(nb_val, *self.x))
+        self.file.write(struct.pack('>i', 4 * self.nb_nodes))
+
+        # Y coordinates
+        self.file.write(struct.pack('>i', 4 * self.nb_nodes))
+        nb_val = '>%if' % self.nb_nodes
+        self.file.write(struct.pack(nb_val, *self.y))
+        self.file.write(struct.pack('>i', 4 * self.nb_nodes))
 

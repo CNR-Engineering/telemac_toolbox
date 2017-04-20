@@ -13,7 +13,6 @@ def index(a, x):
     raise ValueError
 
 
-
 class SerafinVariableNames:
     """
     manage variables names (fr/eng): loading, adding and removing
@@ -28,12 +27,10 @@ class SerafinVariableNames:
             self.var_table = pd.read_csv(os.path.join(base_folder, 'data', 'Serafin_var3D.csv'),
                                          index_col=0, header=0, sep=',')
         self.var_table.sort_values(self.language, inplace=True)
-        self.var_in_file = {var_ID: False for var_ID in self.var_table.index.values}
 
     def find(self, var_name):
         var_index = index(self.var_table[self.language], var_name)
         var_ID = self.var_table.index.values[var_index]
-        self.var_in_file[var_ID] = True
         return var_ID
 
 
