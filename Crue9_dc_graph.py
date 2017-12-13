@@ -21,6 +21,7 @@ L'image de sortie est écrasée si elle existe
 import argparse
 import sys
 
+<<<<<<< HEAD
 
 # Branches
 TYPE_BRANCHES = {
@@ -72,6 +73,10 @@ def key_from_constant(key, CONSTANT):
             return CONSTANT['default']
         except KeyError:
             sys.exit("La clé '{}' n'existe pas".format(key))
+=======
+from common.graph_1d_model import *
+
+>>>>>>> 4cdf0c764604b5a7591e171f1f66cb865685548f
 
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,

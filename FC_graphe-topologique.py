@@ -15,6 +15,7 @@ import argparse
 import sys
 import xml.etree.ElementTree as ET
 
+<<<<<<< HEAD
 
 # Branches
 TYPE_BRANCHES = {
@@ -56,6 +57,10 @@ SIZE = {
     '20': 4,
     'default': 2
 }
+=======
+from common.graph_1d_model import *
+
+>>>>>>> 4cdf0c764604b5a7591e171f1f66cb865685548f
 
 def key_from_constant(key, CONSTANT):
     """Retourne la valeur de key du dictionnanire CONSTANT"""
@@ -85,7 +90,11 @@ parser.add_argument("fichier_drso", help="fichier d'entrée drso")
 parser.add_argument("--out_png", help="fichier de sortie au format png")
 parser.add_argument("--out_svg", help="fichier de sortie au format svg")
 parser.add_argument("--sep", help="ratio pour modifier l'espacement (par ex. 0.5 ou 2) [1 par défaut]", default=1)
+<<<<<<< HEAD
 parser.add_argument("--remove_preffix", help="suppression des préfixes des emh ('Br_' et 'St_')", action='store_true')
+=======
+parser.add_argument("--remove_preffix", help="suppression des préfixes des EMH ('Br_' et 'Nd_')", action='store_true')
+>>>>>>> 4cdf0c764604b5a7591e171f1f66cb865685548f
 args = parser.parse_args()
 
 
