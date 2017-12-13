@@ -15,52 +15,8 @@ import argparse
 import sys
 import xml.etree.ElementTree as ET
 
-<<<<<<< HEAD
-
-# Branches
-TYPE_BRANCHES = {
-    'BrancheBarrageFilEau': '15',
-    # 'BrancheBarrageGenerique': '?',
-    'BrancheSeuilTransversal': '2',
-    'BrancheStrickler': '6',
-    'BrancheSeuilLateral': '4',
-    'BrancheSaintVenant': '20',
-    'BranchePdc': '1',
-    'BrancheOrifice': '5',
-    # 'BrancheNiveauxAssocies': '?',
-    }
-
-ARROWHEAD = {
-    '2': 'curve',
-    '4': 'tee',
-    '5': 'odot',
-    '6': 'diamond',
-    '15': 'box',
-    'default': 'normal'
-    # 'BrancheNiveauxAssocies': '?',
-}
-
-# Couleurs selon le type de branche
-COLORS = {
-    '4': 'darkgreen',
-    '5': 'green',
-    '6': 'purple',
-    '9': 'navy',
-    '20':'blue',
-    'default': 'black'
-}
-
-# Taille de la branche
-SIZE = {
-    '9': 4,
-    '15': 4,
-    '20': 4,
-    'default': 2
-}
-=======
 from common.graph_1d_model import *
 
->>>>>>> 4cdf0c764604b5a7591e171f1f66cb865685548f
 
 def key_from_constant(key, CONSTANT):
     """Retourne la valeur de key du dictionnanire CONSTANT"""
@@ -90,11 +46,7 @@ parser.add_argument("fichier_drso", help="fichier d'entrée drso")
 parser.add_argument("--out_png", help="fichier de sortie au format png")
 parser.add_argument("--out_svg", help="fichier de sortie au format svg")
 parser.add_argument("--sep", help="ratio pour modifier l'espacement (par ex. 0.5 ou 2) [1 par défaut]", default=1)
-<<<<<<< HEAD
-parser.add_argument("--remove_preffix", help="suppression des préfixes des emh ('Br_' et 'St_')", action='store_true')
-=======
 parser.add_argument("--remove_preffix", help="suppression des préfixes des EMH ('Br_' et 'Nd_')", action='store_true')
->>>>>>> 4cdf0c764604b5a7591e171f1f66cb865685548f
 args = parser.parse_args()
 
 
