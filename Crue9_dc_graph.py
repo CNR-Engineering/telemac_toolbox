@@ -42,7 +42,7 @@ with open(dc_file, 'r', encoding="ISO-8859-1") as filein:
     label = None  # pour les goto
 
     for line in filein:
-        line = line.replace('\n', '')
+        line = line.replace('\n', '').strip()
         line = line.upper()  # nom des branches/noeuds non-sensible à la casse
 
         if not line.startswith('*'):
