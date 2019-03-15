@@ -56,11 +56,11 @@ with fiona.open(args.inname, 'r') as filein:
         def write_single_polyline(coord, value, dist):
             global count
             """Ecrire une seule polyligne à partir d'une liste de coordonnées"""
-            coord2 = coord
+            coord_2d = [c[:2] for c in coord]  # ignore Z if present
             if args.ech is not None:
-                coord2 = resampling(coord2, dist)
-            linestring = LineString(coord2)
-            print("Polyligne {} avec {} points".format(count, len(coord2)))
+                coord_2d = resampling(coord_2d, dist)
+            linestring = LineString(coord_2d)
+            print("Polyligne {} avec {} points".format(count, len(coord_2d)))
             count += 1
             if args.shift is not None:
                 linestring = aff.translate(linestring, xoff=args.shift[0], yoff=args.shift[1])
@@ -68,8 +68,6 @@ with fiona.open(args.inname, 'r') as filein:
 
 
         for i, obj in enumerate(filein):
-            print("{},{}".format(i, count))
-
             if obj['geometry'] is None:
                 sys.exit("Object {} is None".format(i))
 
@@ -106,7 +104,7 @@ with fiona.open(args.inname, 'r') as filein:
                     if len(coord)== 1:  #FIXME: Astuce selon le formatage du fichier
                         coord = coord[0]
                         write_single_polyline(coord, value, dist)
-                    else:
+                    else:  # MultiPolygon
                         for sub_coord in coord:
                             write_single_polyline(sub_coord, value, dist)
 
