@@ -23,7 +23,7 @@ with Serafin.Read(args.inname) as resin:
     resin.get_time()
 
     for i in range(resin.nelem):
-        i_elem = i+1 # 1-indexed (lik BlueKenue)
+        i_elem = i+1  # 1-indexed (like BlueKenue)
         nodes = resin.triangle_nodes(i_elem)
 
         pt1 = resin.get_coord(nodes[0])

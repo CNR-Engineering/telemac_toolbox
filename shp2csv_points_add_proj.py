@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 @brief:
-Convertir un fichier shp en un un fichier csv
+Convertir un fichier shp (de type POINT) en un fichier CSV
 X, Y, ...fields...
 """
 #TODO: avec et sans Z? force...
@@ -32,8 +32,8 @@ if args.add_proj is not None:
         for i, elem in enumerate(filein):
             profil_long = LineString(elem['geometry']['coordinates'])
 
-            if i!=0:
-                raise NotImplementedError("Pour l'instant une seule polyligne pour add_proj est attendue")
+            if i != 0:
+                raise NotImplementedError("Une seule polyligne pour add_proj est attendue !")
 
 
 with fiona.open(args.inname, 'r') as filein:

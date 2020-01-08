@@ -1,5 +1,5 @@
-PyTelTools
-==========
+telemac_toolbox
+===============
 
 # Python
 Version: tested with 3.4
