@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 """
 @brief:
-Convertir (et translater) un ensemble de polylignes ouvertes shp en i3s
+Convertir (translater et/ou rééchantillonner) un ensemble de polylignes ouvertes shp en i3s
 
 @features:
 * choix du nombre de chiffres significatifs à écrire
-* translation possible
+* translation horizontale possible en fonction de l'option `--shift`
+* translation verticale possible en fonction de l'option `--shift_z`
 * La valeur de chaque polyligne est adapté en fonction de l'option `--value` :
 *# si l'option value est un flottant alors les valeurs sont toutes égales à cette constante
 *# si l'option value est égale à `iter` alors la valeur correspond à la position/numérotation de la polyligne
@@ -29,6 +30,7 @@ parser.add_argument("--value", help="colonne de la table attributaire (voir l'ai
 parser.add_argument("--ech", help="colonne de la table attributaire (voir l'aide)")
 parser.add_argument("--digits", type=int, help="nombre de chiffres significatifs des flottants")
 parser.add_argument("--shift", type=float, nargs=2, help="décalage en X et Y (en mètre)")
+parser.add_argument("--shift_z", help="colonne de la table attributaire contenant le décalage en Z (en mètre)")
 parser.add_argument("--force", "-f", help="écrase le fichier de sortie s'il existe", action='store_true')
 args = parser.parse_args()
 
@@ -52,7 +54,7 @@ with fiona.open(args.inname, 'r') as filein:
         out_i3s.auto_keywords()
         out_i3s.write_header()
 
-        def write_single_polyline(coord, value):
+        def write_single_polyline(coord, value, shift_z):
             """Ecrire une seule polyligne à partir d'une liste de coordonnées"""
             # Re-echantionnage si nécessaire
             if args.ech is not None:
@@ -61,9 +63,10 @@ with fiona.open(args.inname, 'r') as filein:
                 else:
                     dist = get_attr_value(obj, args.ech)
                 coord = resampling_3D(coord, dist)
+
             linestring = LineString(coord)
             if args.shift is not None:
-                linestring = aff.translate(linestring, xoff=args.shift[0], yoff=args.shift[1])
+                linestring = aff.translate(linestring, xoff=args.shift[0], yoff=args.shift[1], zoff=shift_z)
 
             out_i3s.write_polyline(linestring, value)
 
@@ -78,20 +81,22 @@ with fiona.open(args.inname, 'r') as filein:
             elif value_type == 'iter':
                 value = i
             else:
-                try:
-                    value = obj['properties'][args.value]
-                except KeyError:
-                    print("ERREUR: l'attribut {} n'existe pas".format(args.value), file=sys.stderr)
-                    sys.exit("Les attributs possibles sont : {}".format(list(obj['properties'].keys())))
+                value = get_attr_value(obj, args.value)
+
+            # Récupération de l'attribut shift_z
+            if args.shift_z is None:
+                shift_z = 0.0
+            else:
+                shift_z = get_attr_value(obj, args.shift_z)
 
             # Export des données
             if obj_type == 'MultiLineString':
                 print("Un objet MutliLineString est converti en {} objets LineString".format(len(coord)))
                 for sub_coord in coord:
-                    write_single_polyline(sub_coord, value)
+                    write_single_polyline(sub_coord, value, shift_z)
 
             elif obj_type == 'LineString':
-                write_single_polyline(coord, value)
+                write_single_polyline(coord, value, shift_z)
 
             else:
                 sys.exit("ERREUR: L'objet n'est pas une polyligne, mais vaut {}".format(obj_type))
