@@ -5,7 +5,6 @@ import sys
 from math import sqrt, ceil
 import numpy as np
 
-# class Geodict:
 
 def get_attr_value(obj, attr_name):
     """Obtenir l'attribut de l'objet s'il existe ou planter"""
@@ -14,6 +13,7 @@ def get_attr_value(obj, attr_name):
     except:
         print("ERREUR: l'attribut {} n'existe pas".format(attr_name), file=sys.stderr)
         sys.exit("Les attributs possibles sont : {}".format(list(obj['properties'].keys())))
+
 
 def resampling(coord, dist_max):
     """
@@ -48,7 +48,8 @@ def resampling(coord, dist_max):
             # Add ending point
             new_coord.append((x2, y2))
 
-    return(new_coord)
+    return new_coord
+
 
 def resampling_3D(coord, dist_max): #FIXME merge wih resampling 2D
     """
@@ -84,5 +85,4 @@ def resampling_3D(coord, dist_max): #FIXME merge wih resampling 2D
             # Add ending point
             new_coord.append((x2, y2, z2))
 
-    return(new_coord)
-
+    return new_coord
