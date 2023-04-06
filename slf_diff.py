@@ -69,11 +69,11 @@ with Serafin.Read(args.inname1) as res1, Serafin.Read(args.inname2) as res2:
                 V1 = res1.read_var_in_frame(time, 'V')
                 U2 = res2.read_var_in_frame(time, 'U')
                 V2 = res2.read_var_in_frame(time, 'V')
-                if res1.type is '2D':
+                if res1.type == '2D':
                     V2D1 = np.sqrt(np.power(U1, 2) + np.power(V1, 2))
                     V2D2 = np.sqrt(np.power(U2, 2) + np.power(V2, 2))
                     values = np.vstack((values, V2D1-V2D2))
-                elif res1.type is '3D':
+                elif res1.type == '3D':
                     W1 = res1.read_var_in_frame(time, 'W')
                     W2 = res2.read_var_in_frame(time, 'W')
                     V3D1 = np.sqrt(np.power(U1, 2) + np.power(V1, 2) + np.power(W1, 2))

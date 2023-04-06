@@ -56,7 +56,7 @@ with Serafin.Read(args.inname) as resin:
         resout.time = []
         for i, time in enumerate(resin.time):
             if args.start <= time <= args.end:
-                if i % args.ech is 0:
+                if i % args.ech == 0:
                     resout.time.append(time)
                     var = resin.read_vars_in_frame(time, resout.varID)
                     resout.write_entire_frame(time, var)

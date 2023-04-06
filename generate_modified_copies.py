@@ -64,7 +64,7 @@ with open(args.inname, 'r', encoding=args.encoding) as filein:
             # Cherche si le nombre de remplacements est cohérant
             unique_replacement = True
             for (key, value) in count.items():
-                if value is not 1:
+                if value != 1:
                     print("ATTENTION : Le mot-clé {} a été remplacé {} fois".format(key,value))
                     unique_replacement = False
             if unique_replacement:
